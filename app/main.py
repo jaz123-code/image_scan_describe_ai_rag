@@ -30,11 +30,19 @@ from app.api.admin_alerts import api_router as admin_alerts_api_router
 from app.api.export_training_data import api_router as export_training_data_api_router
 from app.services.scheduler.scheduler import start_scheduler
 
+# prometheus-fastapi-instrumentator is optional; if not installed we skip instrumentation
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+except ImportError:
+    Instrumentator = None
+
 
 load_dotenv()
 
 app = FastAPI(title="AI Image Scanner")
-
+# enable Prometheus instrumentation only if library is available
+if Instrumentator:
+    Instrumentator().instrument(app).expose(app)
 UPLOAD_DIR = "uploads"
 REPORT_DIR = "reports"
 REVIEW_THRESHOLD = 0.75

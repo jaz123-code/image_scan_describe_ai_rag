@@ -6,6 +6,11 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   backend:
     build: .
@@ -14,22 +19,51 @@ services:
       - .:/app
     ports:
       - "8000:8000"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
   worker:
     build: .
-    command: celery -A app.infrastructure.celery_app worker --loglevel=info -E
+    command: celery -A app.infrastructure.celery_app worker --loglevel=info -E --hostname=worker@%h -Q high_priority,default,low_priority
     volumes:
       - .:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
-      - redis
-
+      redis:
+        condition: service_healthy
+  
   flower:
     build: .
     command: celery -A app.infrastructure.celery_app flower --port=5555
     ports:
       - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+  autoscaler:
+    build: .
+    command: python scripts/worker/worker_autoscale.py
     depends_on:
       - redis
-       

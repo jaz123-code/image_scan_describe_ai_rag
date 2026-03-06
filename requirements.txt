@@ -19,3 +19,4 @@ openai
 pydantic[email]
 python-jose[cryptography]==3.3.0
 apscheduler
+prometheus-fastapi-instrumentator

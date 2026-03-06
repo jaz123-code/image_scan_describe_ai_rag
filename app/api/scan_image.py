@@ -61,14 +61,11 @@ async def scan_image_api(
         "SCAN_STARTED",
         f"provider={provider}, threshold={auto_approval_threshold}"
     )
-
+    queue_name="high_priority" if current_user.is_premium else "default"
     # 🔹 Background AI scan
-    task=run_scan_task.delay(
-        image_id,
-        image_path,
-        provider,
-        auto_approval_threshold,  # ⭐ POLICY PASSED HERE
-        db
+    task=run_scan_task.apply_async(
+        args=[image_id, image_path, provider, auto_approval_threshold],
+        queue=queue_name
     )
     task_id=task.id
     result=celery_app.AsyncResult(task_id)
