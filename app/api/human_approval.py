@@ -7,7 +7,7 @@ from app.models.dependencies import get_db
 from app.auth.auth import get_current_user
 from app.services.audit_logger import log_event
 
-api_router = APIRouter(prefix="/human-approval-v1", tags=["v1"])
+api_router = APIRouter(prefix="/api-v1", tags=["v1"])
 
 @api_router.post("/human-approval/")
 async def human_approval(

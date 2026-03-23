@@ -19,6 +19,9 @@ from app.models.cost_calculate import CostHistory
 from app.services.active_learning import should_request_human_review
 from app.infrastructure.celery_app import celery_app
 from app.models.dependencies import SessionLocal
+from app.services.image_scan import scan_image
+from app.workflows.retrain.decision_model import load_model, predict
+from app.models.Evaluation import Evaluation
 
 REVIEW_THRESHOLD = 0.75
 MAX_COST_LIMIT = 1000.0
@@ -69,6 +72,14 @@ def run_scan_task(
         update_progress(db, image_id, progress=20, stage="IMAGE_PREPROCESSING",
                         message="Image loaded successfully")
 
+        #OCR EXTRACTION
+        update_progress(db, image_id, progress=30, stage="OCR_EXTRACTION", message="Extraction text from image")
+        ocr_result=scan_image(image_path)
+        raw_text=ocr_result.get("raw_text","")
+        ocr_summary=ocr_result.get("summary","")
+
+        update_progress(db, image_id, progress=35, stage="OCR_EXTRACTION_COMPLETED", message="OCR extraction completed")
+
         # -----------------------------------
         # MODEL ROUTING
         # -----------------------------------
@@ -114,11 +125,17 @@ def run_scan_task(
 
         warnings = validate_scan(fields)
 
-        status = (
-            "AUTO_APPROVED"
-            if overall_confidence >= auto_threshold
-            else "PENDING_REVIEW"
-        )
+        try:
+            model=load_model()
+            decision=predict(model, [overall_confidence])
+            status="AUTO_APPROVED" if decision==1 else "PENDING_REVIEW"
+        except:
+            status=(
+                "AUTO_APPROVED"
+                if overall_confidence >= auto_threshold
+                else "PENDING_REVIEW"
+            
+            )
 
         log_event(
             db,
@@ -139,6 +156,10 @@ def run_scan_task(
             "warnings": warnings,
             "progress": 100,
             "stage": "COMPLETED",
+            "ocr":{
+                "raw_text": raw_text,
+                "summary": ocr_summary,
+            },
             "routing": {
                 "escalated": escalated,
                 "provider": provider_name,
@@ -174,6 +195,15 @@ def run_scan_task(
             "SCAN_COMPLETED",
             f"Status={scan_result['status']}, confidence={overall_confidence}, escalated={escalated}"
         )
+        evaluation_record = Evaluation(
+            id=str(uuid.uuid4()),
+            image_id=image_id,
+            confidence=overall_confidence,
+            predicted_status=scan_result["status"],
+            actual_status=None
+        )
+        db.add(evaluation_record)
+        db.commit()
           # -----------------------------------
     # PERSIST RESULT
     #----------------------------------- 

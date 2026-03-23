@@ -29,6 +29,8 @@ async def scan_image_api(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    provider="local"
+
     # 🔐 File security
     validate_image(image_file)
 
@@ -61,15 +63,14 @@ async def scan_image_api(
         "SCAN_STARTED",
         f"provider={provider}, threshold={auto_approval_threshold}"
     )
-    queue_name="high_priority" if current_user.is_premium else "default"
+    # Basic queue selection; all users share same queue for now
+    queue_name = "default"
     # 🔹 Background AI scan
-    task=run_scan_task.apply_async(
+    task = run_scan_task.apply_async(
         args=[image_id, image_path, provider, auto_approval_threshold],
-        queue=queue_name
+        queue=queue_name,
     )
-    task_id=task.id
-    result=celery_app.AsyncResult(task_id)
-    print(task_id)
-    print(task_id.status)
+
+    return {"scan_id": image_id, "task_id": task.id, "status": task.status}
 
     

@@ -28,8 +28,11 @@ from app.api.admin_dashboard import api_router as admin_dashboard_api_router
 from app.api.admin_health_check import api_router as admin_health_check_api_router
 from app.api.admin_alerts import api_router as admin_alerts_api_router
 from app.api.export_training_data import api_router as export_training_data_api_router
+from app.api.ws_scan_progress import router as ws_api_router
+from app.api.scan_history import router as history_router
+from app.api.scan_details import router as scan_details_router
 from app.services.scheduler.scheduler import start_scheduler
-
+from fastapi.middleware.cors import CORSMiddleware
 # prometheus-fastapi-instrumentator is optional; if not installed we skip instrumentation
 try:
     from prometheus_fastapi_instrumentator import Instrumentator
@@ -40,6 +43,14 @@ except ImportError:
 load_dotenv()
 
 app = FastAPI(title="AI Image Scanner")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 # enable Prometheus instrumentation only if library is available
 if Instrumentator:
     Instrumentator().instrument(app).expose(app)
@@ -72,6 +83,9 @@ app.include_router(admin_dashboard_api_router)
 app.include_router(admin_health_check_api_router)
 app.include_router(admin_alerts_api_router)
 app.include_router(export_training_data_api_router)
+app.include_router(ws_api_router)
+app.include_router(history_router)
+app.include_router(scan_details_router)
 
 @app.on_event("startup")
 def start_background_jobs():

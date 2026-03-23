@@ -64,6 +64,8 @@ services:
       - prometheus
   autoscaler:
     build: .
-    command: python scripts/worker/worker_autoscale.py
+    command: python app/scripts/worker_autoscale.py
+    volumes:
+      - .:/app
     depends_on:
       - redis
