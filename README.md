@@ -1,7 +1,33 @@
-# Backend Service for Image AI Tutorial
+AI Document Intelligence Platform
 
-This directory contains the backend code and supporting configuration for the Image AI application. It implements the core APIs, business logic, data models, workflows, and infrastructure needed to scan images, generate reports, manage users, and support active learning.
+An end-to-end AI system that processes documents, extracts structured data,
+automatically approves or flags them using confidence scoring,
+and continuously improves through feedback-driven learning.
 
-The backend is built using FastAPI and leverages Celery for asynchronous task processing, Redis for caching and message brokering, and a host of internal services organized into a modular structure. It is designed to be run within a Dockerized development environment configured via `docker-compose.yml`.
+Key Features
+Real-time document scanning with OCR + vision models
+Confidence-based auto-approval system
+Active learning with human feedback loop
+Automated retraining pipeline (scheduled + manual)
+Model performance tracking and promotion
+Cost-aware AI routing
+Admin dashboard with system analytics
+WebSocket-based real-time progress tracking
 
-Refer to the top-level `README.md` for overall project setup, but this file provides backend-specific insights and documentation.
+Describe flow:
+
+Frontend (React)
+    ↓
+FastAPI Backend
+    ↓
+Celery Workers (Async Processing)
+    ↓
+Redis (Queue + Pub/Sub)
+    ↓
+ML Pipeline (Routing + Scoring + Validation)
+    ↓
+Database (Results + Feedback + Models)
+
+The system collects user feedback on predictions,
+builds training datasets automatically,
+and retrains models to improve future decisions.
